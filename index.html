@@ -14,7 +14,15 @@
             --paper-color: #f4f4f0;
             --accent-red: #ff2a2a;
             --black: #111;
+            /* Variabile per la scalatura mobile */
+            --zine-scale: 1;
         }
+
+        /* --- RESPONSIVE SCALING PER SMARTPHONE --- */
+        @media (max-width: 800px) { :root { --zine-scale: 0.8; } }
+        @media (max-width: 600px) { :root { --zine-scale: 0.6; } }
+        @media (max-width: 450px) { :root { --zine-scale: 0.55; } }
+        @media (max-width: 380px) { :root { --zine-scale: 0.45; } }
 
         body {
             background-color: var(--bg-color);
@@ -26,6 +34,7 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* --- STILI INTERFACCIA INTERATTIVA --- */
@@ -79,6 +88,7 @@
             cursor: pointer;
             transition: transform 0.2s, color 0.2s;
             padding: 10px;
+            z-index: 100;
         }
 
         .nav-btn:hover:not(:disabled) {
@@ -91,12 +101,23 @@
             cursor: not-allowed;
         }
 
-        /* Contenitore pagine */
-        #zine-content {
+        /* --- CONTENITORI SCALABILI --- */
+        #zine-scale-wrapper {
+            width: calc(148mm * var(--zine-scale));
+            height: calc(210mm * var(--zine-scale));
             position: relative;
+            flex-shrink: 0;
+        }
+
+        #zine-content {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 148mm;
             height: 210mm;
             perspective: 1000px;
+            transform: scale(var(--zine-scale));
+            transform-origin: top left;
         }
 
         /* Stile delle Pagine */
@@ -125,6 +146,25 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px) rotateX(5deg); }
             to { opacity: 1; transform: translateY(0) rotateX(0); }
+        }
+
+        /* --- MEDIA QUERIES PER LAYOUT SMARTPHONE --- */
+        @media (max-width: 600px) {
+            .controls-top {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .zine-viewer {
+                position: relative;
+                padding-bottom: 80px; /* Spazio per i bottoni di navigazione in basso */
+            }
+            .nav-btn {
+                position: absolute;
+                bottom: 0;
+                font-size: 3.5rem; /* Bottoni più grandi per il touch */
+            }
+            #prevBtn { left: 15%; }
+            #nextBtn { right: 15%; }
         }
 
         /* --- ELEMENTI COLLAGE / ZINE --- */
@@ -268,8 +308,9 @@
             margin-top: 10px;
         }
 
-        /* --- STILI SPECIFICI PER LA MODALITÀ PDF --- */
+        /* --- STILI SPECIFICI PER LA STAMPA NATIVA E PDF --- */
         .pdf-mode {
+            --zine-scale: 1 !important; /* Disabilita la scalatura durante la stampa per mantenere l'alta risoluzione */
             background: white;
             height: auto;
             display: block;
@@ -277,47 +318,53 @@
 
         .pdf-mode .controls-top,
         .pdf-mode .nav-btn,
-        .pdf-mode .llm-textarea,
-        .pdf-mode .llm-btn,
-        .pdf-mode .llm-result {
+        .pdf-mode .llm-container {
             display: none !important;
         }
 
         .pdf-mode .pdf-placeholder { display: block !important; }
 
-        .pdf-mode #zine-content {
+        .pdf-mode #zine-scale-wrapper {
             width: 100%;
             height: auto;
         }
 
-        .pdf-mode .page {
+        .pdf-mode #zine-content {
             position: relative;
-            display: block !important; /* Mostra tutte le pagine nel PDF */
+            transform: none !important;
+        }
+
+        .pdf-mode .page {
+            position: relative !important;
+            display: block !important;
             box-shadow: none !important;
+            margin: 0 !important;
             page-break-after: always;
-            break-after: page;
             min-height: 210mm;
-            animation: none; /* Rimuovi animazioni per la stampa */
+            animation: none !important;
         }
 
         @media print {
             body { background: white; padding: 0; display: block; }
-            .controls-top, .nav-btn { display: none; }
-            #zine-content { width: 100%; height: auto; }
+            .controls-top, .nav-btn, .llm-container { display: none !important; }
+            #zine-scale-wrapper { width: 100%; height: auto; }
+            #zine-content { transform: none !important; position: relative; }
             .page {
-                position: relative;
+                position: relative !important;
                 display: block !important;
-                box-shadow: none;
-                margin: 0;
+                box-shadow: none !important;
+                margin: 0 !important;
                 page-break-after: always;
                 min-height: 210mm;
+                animation: none !important;
             }
+            .pdf-placeholder { display: block !important; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Interfaccia Superiore -->
+    <!-- Interfaccia Superiore con Pulsante PDF ripristinato -->
     <div class="controls-top">
         <div id="page-indicator">Pagina 1 / 10</div>
         <button class="print-btn" onclick="downloadPDF()">🖨️ SCARICA IL PDF</button>
@@ -327,180 +374,185 @@
     <div class="zine-viewer">
         <button id="prevBtn" class="nav-btn" onclick="prevPage()">⬅️</button>
         
-        <!-- Contenitore unico per le pagine -->
-        <div id="zine-content">
-            
-            <!-- PAGINA 1: COPERTINA -->
-            <div class="page active">
-                <div class="tape"></div>
-                <div class="flex-center">
-                    <div class="ransom-note" style="margin-bottom: 20px;">CLASSE A041</div>
-                    <h1 class="title-glitch">L'ESCA</h1>
-                    <p class="marker-text" style="font-size: 1.8rem;">Il trucco del pacco fantasma</p>
-                    
-                    <div class="cutout-img" style="font-size: 7rem; margin-top: 40px;">📱🪝</div>
-                    
-                    <div class="text-box" style="margin-top: auto;">
-                        Una storia vera di ordinaria vulnerabilità.<br>
-                        <strong>Un concetto travestito da storia.</strong>
+        <!-- Wrapper scalabile per smartphone -->
+        <div id="zine-scale-wrapper">
+            <!-- Contenitore unico per le pagine -->
+            <div id="zine-content">
+                
+                <!-- PAGINA 1: COPERTINA -->
+                <div class="page active">
+                    <div class="tape"></div>
+                    <div class="flex-center">
+                        <div class="ransom-note" style="margin-bottom: 20px;">CLASSE A041</div>
+                        <h1 class="title-glitch">L'ESCA</h1>
+                        <p class="marker-text" style="font-size: 1.8rem;">Il trucco del pacco fantasma</p>
+                        
+                        <div class="cutout-img" style="font-size: 7rem; margin-top: 40px;">📱🪝</div>
+                        
+                        <div class="text-box" style="margin-top: auto;">
+                            Una storia vera di ordinaria vulnerabilità.<br>
+                            <strong>Un concetto travestito da storia.</strong>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- PAGINA 2: LA SCENA -->
-            <div class="page">
-                <div class="tape" style="left: -20px; top: 30px; transform: rotate(45deg);"></div>
-                <h2>1. L'ATTESA</h2>
-                <div class="polaroid">
-                    <div style="font-size: 4rem;">🧑‍💻 📦</div>
-                    <div style="font-family: 'Permanent Marker'; margin-top: 10px;">Leo & la Scheda Video</div>
-                </div>
-                <p style="font-size: 1.2rem; line-height: 1.6;">
-                    Questo è Leo. Leo ha appena comprato online la scheda video dei suoi sogni per assemblare il suo PC.
-                </p>
-                <p style="font-size: 1.2rem; line-height: 1.6;">
-                    Controlla il tracking compulsivamente ogni 10 minuti. Lo aspetta. Lo vuole. <br><br>
-                    <span class="marker-text">È VULNERABILE.</span>
-                </p>
-            </div>
-
-            <!-- PAGINA 3: L'INNESCO -->
-            <div class="page">
-                <div class="tape" style="right: -20px; top: 30px; transform: rotate(-45deg);"></div>
-                <h2>2. L'INNESCO</h2>
-                <div class="cutout-img" style="font-size: 5rem;">💬🚨</div>
-                <div class="text-box" style="border-color: var(--accent-red); transform: rotate(1deg);">
-                    <strong style="color: var(--accent-red);">NUOVO MESSAGGIO:</strong><br><br>
-                    "Servizio Dogana: Il tuo pacco è bloccato. Paga 2,50€ di oneri per sbloccarlo o verrà rispedito al mittente. Clicca qui: http://dogana-express-tracking.com"
-                </div>
-                <div style="text-align: right; margin-top: 30px;">
-                    <span class="marker-text" style="font-size: 2.2rem; transform: rotate(-10deg);">URGENTE!!</span>
-                </div>
-            </div>
-
-            <!-- PAGINA 4: L'ERRORE -->
-            <div class="page" style="background-color: #222; color: white;">
-                <h2 style="color: var(--accent-red); font-size: 2.5rem; text-align: center;">3. L'ERRORE</h2>
-                <div class="flex-center">
-                    <div class="cutout-img" style="font-size: 6rem;">👁️ 💳</div>
-                    <p style="font-family: 'Permanent Marker'; font-size: 1.8rem; color: #fff;">
-                        La fretta prende il sopravvento.
+                <!-- PAGINA 2: LA SCENA -->
+                <div class="page">
+                    <div class="tape" style="left: -20px; top: 30px; transform: rotate(45deg);"></div>
+                    <h2>1. L'ATTESA</h2>
+                    <div class="polaroid">
+                        <div style="font-size: 4rem;">🧑‍💻 📦</div>
+                        <div style="font-family: 'Permanent Marker'; margin-top: 10px;">Leo & la Scheda Video</div>
+                    </div>
+                    <p style="font-size: 1.2rem; line-height: 1.6;">
+                        Questo è Leo. Leo ha appena comprato online la scheda video dei suoi sogni per assemblare il suo PC.
                     </p>
-                    <p style="font-size: 1.2rem;">
-                        Leo non ci pensa. Ha paura di perdere il pacco.<br><br>
-                        Clicca.<br>
-                        Inserisce i dati della carta.<br>
-                        <strong>FATTO.</strong>
+                    <p style="font-size: 1.2rem; line-height: 1.6;">
+                        Controlla il tracking compulsivamente ogni 10 minuti. Lo aspetta. Lo vuole. <br><br>
+                        <span class="marker-text">È VULNERABILE.</span>
                     </p>
                 </div>
-            </div>
 
-            <!-- PAGINA 5: LA SCOPERTA -->
-            <div class="page">
-                <h2>4. LA SCOPERTA</h2>
-                <div class="polaroid" style="transform: rotate(3deg); margin-top: 20px;">
-                    <div style="font-size: 4rem;">💸 🔥</div>
-                    <div style="font-family: 'Permanent Marker'; margin-top: 10px; color: var(--accent-red);">Il giorno dopo...</div>
+                <!-- PAGINA 3: L'INNESCO -->
+                <div class="page">
+                    <div class="tape" style="right: -20px; top: 30px; transform: rotate(-45deg);"></div>
+                    <h2>2. L'INNESCO</h2>
+                    <div class="cutout-img" style="font-size: 5rem;">💬🚨</div>
+                    <div class="text-box" style="border-color: var(--accent-red); transform: rotate(1deg);">
+                        <strong style="color: var(--accent-red);">NUOVO MESSAGGIO:</strong><br><br>
+                        "Servizio Dogana: Il tuo pacco è bloccato. Paga 2,50€ di oneri per sbloccarlo o verrà rispedito al mittente. Clicca qui: http://dogana-express-tracking.com"
+                    </div>
+                    <div style="text-align: right; margin-top: 30px;">
+                        <span class="marker-text" style="font-size: 2.2rem; transform: rotate(-10deg);">URGENTE!!</span>
+                    </div>
                 </div>
-                <p style="font-size: 1.1rem; margin-top: 20px;">
-                    Il corriere suona alla porta. Consegna la scheda video. Tutto regolare!
-                </p>
-                <p style="font-size: 1.1rem;">
-                    Leo è felice, finché non apre l'app della banca...
-                </p>
-                <div class="ransom-note" style="font-size: 1.2rem; transform: rotate(-2deg); margin-top: 20px;">
-                    ADDEBITO: -450€ (Piattaforma Criptovalute)
-                </div>
-            </div>
 
-            <!-- PAGINA 6: IL CONCETTO SVELATO -->
-            <div class="page">
-                <h2 class="title-glitch" style="font-size: 2.2rem; text-align: left;">IL TRUCCO</h2>
-                <div class="text-box" style="background: #fff9c4;">
-                    <h3 style="margin-top:0;">SOCIAL ENGINEERING (Smishing)</h3>
-                    <p>
-                        Leo non ha un virus sul telefono. L'hacker non ha forzato un sistema informatico, ha <strong>forzato la mente</strong> di Leo.
+                <!-- PAGINA 4: L'ERRORE -->
+                <div class="page" style="background-color: #222; color: white;">
+                    <h2 style="color: var(--accent-red); font-size: 2.5rem; text-align: center;">3. L'ERRORE</h2>
+                    <div class="flex-center">
+                        <div class="cutout-img" style="font-size: 6rem;">👁️ 💳</div>
+                        <p style="font-family: 'Permanent Marker'; font-size: 1.8rem; color: #fff;">
+                            La fretta prende il sopravvento.
+                        </p>
+                        <p style="font-size: 1.2rem;">
+                            Leo non ci pensa. Ha paura di perdere il pacco.<br><br>
+                            Clicca.<br>
+                            Inserisce i dati della carta.<br>
+                            <strong>FATTO.</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- PAGINA 5: LA SCOPERTA -->
+                <div class="page">
+                    <h2>4. LA SCOPERTA</h2>
+                    <div class="polaroid" style="transform: rotate(3deg); margin-top: 20px;">
+                        <div style="font-size: 4rem;">💸 🔥</div>
+                        <div style="font-family: 'Permanent Marker'; margin-top: 10px; color: var(--accent-red);">Il giorno dopo...</div>
+                    </div>
+                    <p style="font-size: 1.1rem; margin-top: 20px;">
+                        Il corriere suona alla porta. Consegna la scheda video. Tutto regolare!
+                    </p>
+                    <p style="font-size: 1.1rem;">
+                        Leo è felice, finché non apre l'app della banca...
+                    </p>
+                    <div class="ransom-note" style="font-size: 1.2rem; transform: rotate(-2deg); margin-top: 20px;">
+                        ADDEBITO: -450€ (Piattaforma Criptovalute)
+                    </div>
+                </div>
+
+                <!-- PAGINA 6: IL CONCETTO SVELATO -->
+                <div class="page">
+                    <h2 class="title-glitch" style="font-size: 2.2rem; text-align: left;">IL TRUCCO</h2>
+                    <div class="text-box" style="background: #fff9c4;">
+                        <h3 style="margin-top:0;">SOCIAL ENGINEERING (Smishing)</h3>
+                        <p>
+                            Leo non ha un virus sul telefono. L'hacker non ha forzato un sistema informatico, ha <strong>forzato la mente</strong> di Leo.
+                        </p>
+                    </div>
+                    <div class="cutout-img" style="font-size: 4rem;">🧠 🔓</div>
+                    <p style="font-size: 1.1rem;">
+                        Lo <em>Smishing</em> sfrutta le emozioni umane (ansia, fretta) per farti abbassare le difese. È l'arte dell'inganno applicata all'informatica.
                     </p>
                 </div>
-                <div class="cutout-img" style="font-size: 4rem;">🧠 🔓</div>
-                <p style="font-size: 1.1rem;">
-                    Lo <em>Smishing</em> sfrutta le emozioni umane (ansia, fretta) per farti abbassare le difese. È l'arte dell'inganno applicata all'informatica.
-                </p>
-            </div>
 
-            <!-- PAGINA 7: RIFLESSIONE COLLETTIVA -->
-            <div class="page">
-                <h2>IL FATTORE UMANO</h2>
-                <div class="cutout-img" style="font-size: 4rem;">👥 🔗 🛑</div>
-                <div class="text-box">
-                    <strong>Perché studiamo questo a scuola?</strong><br><br>
-                    Nella quotidianità siamo bombardati di notifiche. La sicurezza non dipende solo dagli antivirus o dai firewall.
+                <!-- PAGINA 7: RIFLESSIONE COLLETTIVA -->
+                <div class="page">
+                    <h2>IL FATTORE UMANO</h2>
+                    <div class="cutout-img" style="font-size: 4rem;">👥 🔗 🛑</div>
+                    <div class="text-box">
+                        <strong>Perché studiamo questo a scuola?</strong><br><br>
+                        Nella quotidianità siamo bombardati di notifiche. La sicurezza non dipende solo dagli antivirus o dai firewall.
+                    </div>
+                    <p style="font-size: 1.1rem; text-align: center; margin-top: 20px;">
+                        <span class="marker-text" style="font-size: 1.6rem;">L'UMANO</span><br>
+                        è sempre l'anello debole della catena informatica.
+                    </p>
                 </div>
-                <p style="font-size: 1.1rem; text-align: center; margin-top: 20px;">
-                    <span class="marker-text" style="font-size: 1.6rem;">L'UMANO</span><br>
-                    è sempre l'anello debole della catena informatica.
-                </p>
-            </div>
 
-            <!-- PAGINA 8: INTERATTIVA 1 (ORACLE) -->
-            <div class="page">
-                <h2 style="font-size: 1.8rem; margin-top:0;">L'ORACOLO DELLO SCAM ✨</h2>
-                <p style="font-size: 0.9rem; margin-top: -10px;">Incolla qui un SMS o un'email sospetta. L'intelligenza artificiale analizzerà le tecniche di Ingegneria Sociale usate.</p>
-                
-                <div class="llm-container">
-                    <textarea id="scamInput" class="llm-textarea" placeholder="Esempio: 'Banca X: Il tuo conto è bloccato per sicurezza. Clicca qui...'"></textarea>
-                    <button id="analyzeBtn" class="llm-btn" onclick="analyzeMessage()">Analizza Messaggio ✨</button>
-                    <div id="llmResult" class="llm-result"></div>
+                <!-- PAGINA 8: INTERATTIVA 1 (ORACLE) -->
+                <div class="page">
+                    <h2 style="font-size: 1.8rem; margin-top:0;">L'ORACOLO DELLO SCAM ✨</h2>
+                    <p style="font-size: 0.9rem; margin-top: -10px;">Incolla qui un SMS o un'email sospetta. L'intelligenza artificiale analizzerà le tecniche di Ingegneria Sociale usate.</p>
+                    
+                    <div class="llm-container">
+                        <textarea id="scamInput" class="llm-textarea" placeholder="Esempio: 'Banca X: Il tuo conto è bloccato per sicurezza. Clicca qui...'"></textarea>
+                        <button id="analyzeBtn" class="llm-btn" onclick="analyzeMessage()">Analizza Messaggio ✨</button>
+                        <div id="llmResult" class="llm-result"></div>
+                    </div>
                     <!-- Questo spazio apparirà solo nel PDF scaricato -->
                     <div class="pdf-placeholder"></div>
+                    
+                    <div style="text-align:center; margin-top: 15px;">
+                        <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
+                    </div>
                 </div>
-                <div style="text-align:center; margin-top: 15px;">
-                    <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
-                </div>
-            </div>
 
-            <!-- PAGINA 9: INTERATTIVA 2 (LABORATORIO HACKER) -->
-            <div class="page">
-                <h2 style="font-size: 1.8rem; margin-top:0;">IL LABORATORIO HACKER ✨</h2>
-                <p style="font-size: 0.9rem; margin-top: -10px;">Mettiti nei panni dell'attaccante. Crea una simulazione di <em>Spear Phishing</em> inserendo un bersaglio e un'esca.</p>
-                
-                <div class="llm-container" style="transform: rotate(-1deg); border-color: var(--black);">
-                    <input type="text" id="targetInput" class="llm-textarea" style="height: 40px; margin-bottom: 5px;" placeholder="Bersaglio (es. Nonno, Gamer, Studente)">
-                    <input type="text" id="baitInput" class="llm-textarea" style="height: 40px;" placeholder="Esca (es. Multa, Regalo, Voti trapelati)">
-                    <button id="simulateBtn" class="llm-btn" style="background-color: var(--accent-red);" onclick="generatePhishing()">Genera Simulazione ✨</button>
-                    <div id="labResult" class="llm-result" style="border-left-color: var(--black);"></div>
+                <!-- PAGINA 9: INTERATTIVA 2 (LABORATORIO HACKER) -->
+                <div class="page">
+                    <h2 style="font-size: 1.8rem; margin-top:0;">IL LABORATORIO HACKER ✨</h2>
+                    <p style="font-size: 0.9rem; margin-top: -10px;">Mettiti nei panni dell'attaccante. Crea una simulazione di <em>Spear Phishing</em> inserendo un bersaglio e un'esca.</p>
+                    
+                    <div class="llm-container" style="transform: rotate(-1deg); border-color: var(--black);">
+                        <input type="text" id="targetInput" class="llm-textarea" style="height: 40px; margin-bottom: 5px;" placeholder="Bersaglio (es. Nonno, Gamer, Studente)">
+                        <input type="text" id="baitInput" class="llm-textarea" style="height: 40px;" placeholder="Esca (es. Multa, Regalo, Voti trapelati)">
+                        <button id="simulateBtn" class="llm-btn" style="background-color: var(--accent-red);" onclick="generatePhishing()">Genera Simulazione ✨</button>
+                        <div id="labResult" class="llm-result" style="border-left-color: var(--black);"></div>
+                    </div>
                     <!-- Questo spazio apparirà solo nel PDF scaricato -->
                     <div class="pdf-placeholder"></div>
-                </div>
-                <div style="text-align:center; margin-top: 15px;">
-                    <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
-                </div>
-            </div>
-
-            <!-- PAGINA 10: CHIUSURA E QR CODE REALE -->
-            <div class="page">
-                <div class="flex-center">
-                    <h2 style="font-size: 2.2rem; text-align: center;">FAI UN RESPIRO<br>PRIMA DI CLICCARE.</h2>
                     
-                    <div class="polaroid" style="width: 120px; margin: 30px auto; transform: rotate(0deg);">
-                        <!-- QR Code generato dinamicamente. Sostituisci il link all'interno del parametro 'data=' con il tuo URL finale -->
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://albybmaker.github.io/zine-a041/" alt="QR Code" style="width: 100px; height: 100px; display: block; margin: 0 auto;">
-                        <div style="font-size: 0.8rem; margin-top: 5px; font-family: sans-serif;">SCAN ME</div>
-                    </div>
-                    
-                    <div style="margin-top: auto; width: 100%; border-top: 2px dashed #000; padding-top: 20px;">
-                        <p class="marker-text" style="font-size: 1.5rem; transform: rotate(0deg);">Alberto Boscia</p><br>
-                        <small>Classe di Concorso A041 - Scienze e Tecnologie Informatiche</small>
+                    <div style="text-align:center; margin-top: 15px;">
+                        <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
                     </div>
                 </div>
-            </div>
 
-        </div> <!-- Fine contenitore PDF -->
+                <!-- PAGINA 10: CHIUSURA E QR CODE REALE -->
+                <div class="page">
+                    <div class="flex-center">
+                        <h2 style="font-size: 2.2rem; text-align: center;">FAI UN RESPIRO<br>PRIMA DI CLICCARE.</h2>
+                        
+                        <div class="polaroid" style="width: 120px; margin: 30px auto; transform: rotate(0deg);">
+                            <!-- QR Code generato dinamicamente. Sostituisci il link all'interno del parametro 'data=' con il tuo URL finale -->
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://iltuositoweb.it/zine_a041.html" alt="QR Code" style="width: 100px; height: 100px; display: block; margin: 0 auto;">
+                            <div style="font-size: 0.8rem; margin-top: 5px; font-family: sans-serif;">SCAN ME</div>
+                        </div>
+                        
+                        <div style="margin-top: auto; width: 100%; border-top: 2px dashed #000; padding-top: 20px;">
+                            <p class="marker-text" style="font-size: 1.5rem; transform: rotate(0deg);">Alberto Boscia</p><br>
+                            <small>Classe di Concorso A041 - Scienze e Tecnologie Informatiche</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- Fine #zine-content -->
+        </div> <!-- Fine #zine-scale-wrapper -->
         
         <button id="nextBtn" class="nav-btn" onclick="nextPage()">➡️</button>
     </div>
 
-    <!-- SCRIPT PER INTERATTIVITÀ, GEMINI API E PDF -->
+    <!-- SCRIPT PER INTERATTIVITÀ, GEMINI API E GENERAZIONE PDF -->
     <script>
         // --- LOGICA DI NAVIGAZIONE PAGINE (INTERATTIVITÀ) ---
         let currentPage = 0;
@@ -551,7 +603,7 @@
             btn.innerHTML = "GENERAZIONE PDF IN CORSO... ⏳";
             btn.disabled = true;
 
-            // Attiviamo la modalità PDF (mostra tutte le pagine in blocco per il salvataggio)
+            // Attiviamo la modalità PDF (mostra tutte le pagine, annulla animazioni/scalature)
             document.body.classList.add('pdf-mode');
 
             const opt = {
