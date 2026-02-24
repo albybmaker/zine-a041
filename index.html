@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zine A041 - L'Esca (Interattiva)</title>
+    <!-- Importiamo font in stile Zine -->
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Glitch&family=Special+Elite&display=swap" rel="stylesheet">
+    <!-- Libreria per l'esportazione diretta in PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #2c2c2c;
+            --paper-color: #f4f4f0;
+            --accent-red: #ff2a2a;
+            --black: #111;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Special Elite', monospace;
+            color: var(--black);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- STILI INTERFACCIA INTERATTIVA --- */
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 148mm;
+            margin-bottom: 20px;
+        }
+
+        .print-btn {
+            background-color: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Permanent Marker', cursive;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 3px 3px 0px var(--black);
+            transition: transform 0.1s;
+        }
+
+        .print-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px var(--black);
+        }
+
+        #page-indicator {
+            color: white;
+            font-family: 'Permanent Marker', cursive;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .zine-viewer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            transition: transform 0.2s, color 0.2s;
+            padding: 10px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            transform: scale(1.2);
+            color: var(--accent-red);
+        }
+
+        .nav-btn:disabled {
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Contenitore pagine */
+        #zine-content {
+            position: relative;
+            width: 148mm;
+            height: 210mm;
+            perspective: 1000px;
+        }
+
+        /* Stile delle Pagine */
+        .page {
+            width: 100%;
+            height: 100%;
+            background-color: var(--paper-color);
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding: 30px;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            
+            /* Animazione e visibilità per la modalità interattiva */
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px) rotateX(5deg); }
+            to { opacity: 1; transform: translateY(0) rotateX(0); }
+        }
+
+        /* --- ELEMENTI COLLAGE / ZINE --- */
+        .title-glitch {
+            font-family: 'Rubik Glitch', system-ui;
+            font-size: 3.5rem;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--black);
+            text-shadow: 3px 3px 0px var(--accent-red);
+        }
+
+        .marker-text {
+            font-family: 'Permanent Marker', cursive;
+            color: var(--accent-red);
+            font-size: 1.5rem;
+            transform: rotate(-3deg);
+            display: inline-block;
+        }
+
+        .ransom-note {
+            background-color: var(--black);
+            color: white;
+            padding: 5px 10px;
+            font-family: sans-serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: inline-block;
+            transform: rotate(2deg);
+        }
+
+        .cutout-img {
+            font-size: 6rem;
+            text-align: center;
+            margin: 20px 0;
+            filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.2));
+        }
+
+        .tape {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            backdrop-filter: blur(2px);
+            height: 25px;
+            width: 100px;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            z-index: 10;
+        }
+
+        .polaroid {
+            background: white;
+            padding: 10px 10px 30px 10px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+            text-align: center;
+            transform: rotate(-4deg);
+            margin: 20px auto;
+            width: 70%;
+            border: 1px solid #ddd;
+        }
+
+        .flex-center {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .text-box {
+            background: white;
+            border: 2px solid var(--black);
+            padding: 15px;
+            margin-top: 20px;
+            box-shadow: 4px 4px 0px var(--black);
+            font-size: 1.1rem;
+            line-height: 1.4;
+        }
+
+        /* --- LLM APP STYLES --- */
+        .llm-container {
+            border: 3px dashed var(--accent-red);
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            margin-top: 15px;
+            transform: rotate(1deg);
+        }
+        
+        .llm-textarea {
+            width: 100%;
+            height: 80px;
+            box-sizing: border-box;
+            border: 2px solid var(--black);
+            font-family: 'Special Elite', monospace;
+            padding: 10px;
+            font-size: 1rem;
+            resize: none;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+
+        .llm-btn {
+            background-color: var(--black);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Permanent Marker', cursive;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        .llm-btn:hover { background-color: var(--accent-red); }
+        .llm-btn:disabled { background-color: #666; cursor: not-allowed; }
+
+        .llm-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff9c4;
+            border-left: 5px solid var(--accent-red);
+            font-size: 0.9rem;
+            display: none;
+            text-align: left;
+            max-height: 130px;
+            overflow-y: auto;
+        }
+        
+        .llm-result ul { padding-left: 20px; margin: 5px 0; }
+        .llm-result p { margin: 5px 0; }
+
+        .pdf-placeholder {
+            display: none;
+            width: 100%;
+            height: 120px;
+            border: 2px dashed var(--black);
+            background: repeating-linear-gradient(transparent, transparent 24px, #ccc 25px, #ccc 26px);
+            margin-top: 10px;
+        }
+
+        /* --- STILI SPECIFICI PER LA MODALITÀ PDF --- */
+        .pdf-mode {
+            background: white;
+            height: auto;
+            display: block;
+        }
+
+        .pdf-mode .controls-top,
+        .pdf-mode .nav-btn,
+        .pdf-mode .llm-textarea,
+        .pdf-mode .llm-btn,
+        .pdf-mode .llm-result {
+            display: none !important;
+        }
+
+        .pdf-mode .pdf-placeholder { display: block !important; }
+
+        .pdf-mode #zine-content {
+            width: 100%;
+            height: auto;
+        }
+
+        .pdf-mode .page {
+            position: relative;
+            display: block !important; /* Mostra tutte le pagine nel PDF */
+            box-shadow: none !important;
+            page-break-after: always;
+            break-after: page;
+            min-height: 210mm;
+            animation: none; /* Rimuovi animazioni per la stampa */
+        }
+
+        @media print {
+            body { background: white; padding: 0; display: block; }
+            .controls-top, .nav-btn { display: none; }
+            #zine-content { width: 100%; height: auto; }
+            .page {
+                position: relative;
+                display: block !important;
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+                min-height: 210mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Interfaccia Superiore -->
+    <div class="controls-top">
+        <div id="page-indicator">Pagina 1 / 10</div>
+        <button class="print-btn" onclick="downloadPDF()">🖨️ SCARICA IL PDF</button>
+    </div>
+
+    <!-- Visore Interattivo della Zine -->
+    <div class="zine-viewer">
+        <button id="prevBtn" class="nav-btn" onclick="prevPage()">⬅️</button>
+        
+        <!-- Contenitore unico per le pagine -->
+        <div id="zine-content">
+            
+            <!-- PAGINA 1: COPERTINA -->
+            <div class="page active">
+                <div class="tape"></div>
+                <div class="flex-center">
+                    <div class="ransom-note" style="margin-bottom: 20px;">CLASSE A041</div>
+                    <h1 class="title-glitch">L'ESCA</h1>
+                    <p class="marker-text" style="font-size: 1.8rem;">Il trucco del pacco fantasma</p>
+                    
+                    <div class="cutout-img" style="font-size: 7rem; margin-top: 40px;">📱🪝</div>
+                    
+                    <div class="text-box" style="margin-top: auto;">
+                        Una storia vera di ordinaria vulnerabilità.<br>
+                        <strong>Un concetto travestito da storia.</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGINA 2: LA SCENA -->
+            <div class="page">
+                <div class="tape" style="left: -20px; top: 30px; transform: rotate(45deg);"></div>
+                <h2>1. L'ATTESA</h2>
+                <div class="polaroid">
+                    <div style="font-size: 4rem;">🧑‍💻 📦</div>
+                    <div style="font-family: 'Permanent Marker'; margin-top: 10px;">Leo & la Scheda Video</div>
+                </div>
+                <p style="font-size: 1.2rem; line-height: 1.6;">
+                    Questo è Leo. Leo ha appena comprato online la scheda video dei suoi sogni per assemblare il suo PC.
+                </p>
+                <p style="font-size: 1.2rem; line-height: 1.6;">
+                    Controlla il tracking compulsivamente ogni 10 minuti. Lo aspetta. Lo vuole. <br><br>
+                    <span class="marker-text">È VULNERABILE.</span>
+                </p>
+            </div>
+
+            <!-- PAGINA 3: L'INNESCO -->
+            <div class="page">
+                <div class="tape" style="right: -20px; top: 30px; transform: rotate(-45deg);"></div>
+                <h2>2. L'INNESCO</h2>
+                <div class="cutout-img" style="font-size: 5rem;">💬🚨</div>
+                <div class="text-box" style="border-color: var(--accent-red); transform: rotate(1deg);">
+                    <strong style="color: var(--accent-red);">NUOVO MESSAGGIO:</strong><br><br>
+                    "Servizio Dogana: Il tuo pacco è bloccato. Paga 2,50€ di oneri per sbloccarlo o verrà rispedito al mittente. Clicca qui: http://dogana-express-tracking.com"
+                </div>
+                <div style="text-align: right; margin-top: 30px;">
+                    <span class="marker-text" style="font-size: 2.2rem; transform: rotate(-10deg);">URGENTE!!</span>
+                </div>
+            </div>
+
+            <!-- PAGINA 4: L'ERRORE -->
+            <div class="page" style="background-color: #222; color: white;">
+                <h2 style="color: var(--accent-red); font-size: 2.5rem; text-align: center;">3. L'ERRORE</h2>
+                <div class="flex-center">
+                    <div class="cutout-img" style="font-size: 6rem;">👁️ 💳</div>
+                    <p style="font-family: 'Permanent Marker'; font-size: 1.8rem; color: #fff;">
+                        La fretta prende il sopravvento.
+                    </p>
+                    <p style="font-size: 1.2rem;">
+                        Leo non ci pensa. Ha paura di perdere il pacco.<br><br>
+                        Clicca.<br>
+                        Inserisce i dati della carta.<br>
+                        <strong>FATTO.</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- PAGINA 5: LA SCOPERTA -->
+            <div class="page">
+                <h2>4. LA SCOPERTA</h2>
+                <div class="polaroid" style="transform: rotate(3deg); margin-top: 20px;">
+                    <div style="font-size: 4rem;">💸 🔥</div>
+                    <div style="font-family: 'Permanent Marker'; margin-top: 10px; color: var(--accent-red);">Il giorno dopo...</div>
+                </div>
+                <p style="font-size: 1.1rem; margin-top: 20px;">
+                    Il corriere suona alla porta. Consegna la scheda video. Tutto regolare!
+                </p>
+                <p style="font-size: 1.1rem;">
+                    Leo è felice, finché non apre l'app della banca...
+                </p>
+                <div class="ransom-note" style="font-size: 1.2rem; transform: rotate(-2deg); margin-top: 20px;">
+                    ADDEBITO: -450€ (Piattaforma Criptovalute)
+                </div>
+            </div>
+
+            <!-- PAGINA 6: IL CONCETTO SVELATO -->
+            <div class="page">
+                <h2 class="title-glitch" style="font-size: 2.2rem; text-align: left;">IL TRUCCO</h2>
+                <div class="text-box" style="background: #fff9c4;">
+                    <h3 style="margin-top:0;">SOCIAL ENGINEERING (Smishing)</h3>
+                    <p>
+                        Leo non ha un virus sul telefono. L'hacker non ha forzato un sistema informatico, ha <strong>forzato la mente</strong> di Leo.
+                    </p>
+                </div>
+                <div class="cutout-img" style="font-size: 4rem;">🧠 🔓</div>
+                <p style="font-size: 1.1rem;">
+                    Lo <em>Smishing</em> sfrutta le emozioni umane (ansia, fretta) per farti abbassare le difese. È l'arte dell'inganno applicata all'informatica.
+                </p>
+            </div>
+
+            <!-- PAGINA 7: RIFLESSIONE COLLETTIVA -->
+            <div class="page">
+                <h2>IL FATTORE UMANO</h2>
+                <div class="cutout-img" style="font-size: 4rem;">👥 🔗 🛑</div>
+                <div class="text-box">
+                    <strong>Perché studiamo questo a scuola?</strong><br><br>
+                    Nella quotidianità siamo bombardati di notifiche. La sicurezza non dipende solo dagli antivirus o dai firewall.
+                </div>
+                <p style="font-size: 1.1rem; text-align: center; margin-top: 20px;">
+                    <span class="marker-text" style="font-size: 1.6rem;">L'UMANO</span><br>
+                    è sempre l'anello debole della catena informatica.
+                </p>
+            </div>
+
+            <!-- PAGINA 8: INTERATTIVA 1 (ORACLE) -->
+            <div class="page">
+                <h2 style="font-size: 1.8rem; margin-top:0;">L'ORACOLO DELLO SCAM ✨</h2>
+                <p style="font-size: 0.9rem; margin-top: -10px;">Incolla qui un SMS o un'email sospetta. L'intelligenza artificiale analizzerà le tecniche di Ingegneria Sociale usate.</p>
+                
+                <div class="llm-container">
+                    <textarea id="scamInput" class="llm-textarea" placeholder="Esempio: 'Banca X: Il tuo conto è bloccato per sicurezza. Clicca qui...'"></textarea>
+                    <button id="analyzeBtn" class="llm-btn" onclick="analyzeMessage()">Analizza Messaggio ✨</button>
+                    <div id="llmResult" class="llm-result"></div>
+                    <!-- Questo spazio apparirà solo nel PDF scaricato -->
+                    <div class="pdf-placeholder"></div>
+                </div>
+                <div style="text-align:center; margin-top: 15px;">
+                    <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
+                </div>
+            </div>
+
+            <!-- PAGINA 9: INTERATTIVA 2 (LABORATORIO HACKER) -->
+            <div class="page">
+                <h2 style="font-size: 1.8rem; margin-top:0;">IL LABORATORIO HACKER ✨</h2>
+                <p style="font-size: 0.9rem; margin-top: -10px;">Mettiti nei panni dell'attaccante. Crea una simulazione di <em>Spear Phishing</em> inserendo un bersaglio e un'esca.</p>
+                
+                <div class="llm-container" style="transform: rotate(-1deg); border-color: var(--black);">
+                    <input type="text" id="targetInput" class="llm-textarea" style="height: 40px; margin-bottom: 5px;" placeholder="Bersaglio (es. Nonno, Gamer, Studente)">
+                    <input type="text" id="baitInput" class="llm-textarea" style="height: 40px;" placeholder="Esca (es. Multa, Regalo, Voti trapelati)">
+                    <button id="simulateBtn" class="llm-btn" style="background-color: var(--accent-red);" onclick="generatePhishing()">Genera Simulazione ✨</button>
+                    <div id="labResult" class="llm-result" style="border-left-color: var(--black);"></div>
+                    <!-- Questo spazio apparirà solo nel PDF scaricato -->
+                    <div class="pdf-placeholder"></div>
+                </div>
+                <div style="text-align:center; margin-top: 15px;">
+                    <span class="marker-text" style="font-size: 1.2rem;">Powered by Gemini API</span>
+                </div>
+            </div>
+
+            <!-- PAGINA 10: CHIUSURA E QR CODE REALE -->
+            <div class="page">
+                <div class="flex-center">
+                    <h2 style="font-size: 2.2rem; text-align: center;">FAI UN RESPIRO<br>PRIMA DI CLICCARE.</h2>
+                    
+                    <div class="polaroid" style="width: 120px; margin: 30px auto; transform: rotate(0deg);">
+                        <!-- QR Code generato dinamicamente. Sostituisci il link all'interno del parametro 'data=' con il tuo URL finale -->
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://iltuositoweb.it/zine_a041.html" alt="QR Code" style="width: 100px; height: 100px; display: block; margin: 0 auto;">
+                        <div style="font-size: 0.8rem; margin-top: 5px; font-family: sans-serif;">SCAN ME</div>
+                    </div>
+                    
+                    <div style="margin-top: auto; width: 100%; border-top: 2px dashed #000; padding-top: 20px;">
+                        <p class="marker-text" style="font-size: 1.5rem; transform: rotate(0deg);">Alberto Boscia</p><br>
+                        <small>Classe di Concorso A041 - Scienze e Tecnologie Informatiche</small>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- Fine contenitore PDF -->
+        
+        <button id="nextBtn" class="nav-btn" onclick="nextPage()">➡️</button>
+    </div>
+
+    <!-- SCRIPT PER INTERATTIVITÀ, GEMINI API E PDF -->
+    <script>
+        // --- LOGICA DI NAVIGAZIONE PAGINE (INTERATTIVITÀ) ---
+        let currentPage = 0;
+        const pages = document.querySelectorAll('.page');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const indicator = document.getElementById('page-indicator');
+
+        function updateView() {
+            pages.forEach((page, index) => {
+                if (index === currentPage) {
+                    page.classList.add('active');
+                } else {
+                    page.classList.remove('active');
+                }
+            });
+            
+            // Aggiorna bottoni e indicatore
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage === pages.length - 1;
+            indicator.innerText = `Pagina ${currentPage + 1} / ${pages.length}`;
+        }
+
+        function nextPage() {
+            if (currentPage < pages.length - 1) {
+                currentPage++;
+                updateView();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                updateView();
+            }
+        }
+
+        // Inizializza la prima vista
+        updateView();
+
+
+        // --- LOGICA DI ESPORTAZIONE PDF ---
+        function downloadPDF() {
+            const element = document.getElementById('zine-content');
+            const btn = document.querySelector('.print-btn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = "GENERAZIONE PDF IN CORSO... ⏳";
+            btn.disabled = true;
+
+            // Attiviamo la modalità PDF (mostra tutte le pagine in blocco per il salvataggio)
+            document.body.classList.add('pdf-mode');
+
+            const opt = {
+                margin:       0,
+                filename:     'Zine_A041_Alberto_Boscia.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] } 
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Ripristiniamo la visualizzazione interattiva web dopo il salvataggio
+                document.body.classList.remove('pdf-mode');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // Torna alla pagina in cui eravamo
+                updateView();
+            });
+        }
+
+
+        // --- LOGICA GEMINI API (FUNZIONI CONDIVISE) ---
+        const apiKey = ""; // Lasciato vuoto, l'ambiente fornirà la chiave
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        // Wrapper generico per la chiamata API con Exponential Backoff
+        async function fetchGeminiAPI(userText, systemInstruction) {
+            const payload = {
+                contents: [{ parts: [{ text: userText }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            const retries = 5;
+            const delay = 1000;
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+                }
+            }
+        }
+
+        // --- FEATURE 1: L'ORACOLO DELLO SCAM ---
+        const oracleSystemPrompt = `
+            Sei un esperto hacker etico e docente di informatica (Classe A041). 
+            L'utente ti invia un messaggio sospetto. Devi analizzarlo scovando tentativi di Social Engineering.
+            Rispondi SEMPRE in italiano, usando un tono da fanzine underground, ribelle ma didattico.
+            Mantieni la risposta MOLTO BREVE (massimo 4-5 righe) per stare nell'impaginazione.
+            Struttura:
+            <p><b>VERDETTO:</b> [TRUFFA / SOSPETTO / SICURO]</p>
+            <p><b>RED FLAGS:</b> [Elenca rapidamente cosa c'è di strano]</p>
+        `;
+
+        async function analyzeMessage() {
+            const inputEl = document.getElementById('scamInput');
+            const resultEl = document.getElementById('llmResult');
+            const btnEl = document.getElementById('analyzeBtn');
+            const userText = inputEl.value.trim();
+
+            if (!userText) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = "<p style='color: var(--accent-red);'><b>ERRORE 404:</b> Nessun testo rilevato. Incolla un messaggio!</p>";
+                return;
+            }
+
+            btnEl.disabled = true;
+            btnEl.innerHTML = "ANALISI IN CORSO... 🕵️‍♂️";
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = "<p><i>Scannerizzazione pattern comportamentali...</i></p>";
+
+            try {
+                const data = await fetchGeminiAPI(userText, oracleSystemPrompt);
+                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (responseText) {
+                    resultEl.innerHTML = responseText;
+                } else {
+                    resultEl.innerHTML = "<p>Nessuna anomalia rilevabile, ma rimani in guardia.</p>";
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                resultEl.innerHTML = "<p style='color: var(--accent-red);'><b>ERRORE MAIN FRAME.</b> Riprova più tardi.</p>";
+            } finally {
+                btnEl.disabled = false;
+                btnEl.innerHTML = "ANALIZZA UN ALTRO SCAM ✨";
+            }
+        }
+
+        // --- FEATURE 2: IL LABORATORIO HACKER ---
+        const labSystemPrompt = `
+            Sei un docente di cybersecurity (A041) in una simulazione controllata. 
+            L'utente ti fornisce un "Bersaglio" e un' "Esca". Devi creare un realistico SMS o Email di Spear Phishing basato su questi dati.
+            Rispondi SEMPRE in italiano. Mantieni il messaggio generato realistico ma con chiari segni di phishing se si osserva attentamente.
+            La risposta deve essere MOLTO BREVE (massimo 4-5 righe).
+            Struttura:
+            <p><b>MESSAGGIO GENERATO:</b><br> [Inserisci la finta email o SMS qui]</p>
+            <p><b>LEVA PSICOLOGICA:</b> [Spiega brevemente la tattica usata: es. Urgenza, Paura, Desiderio di premio...]</p>
+        `;
+
+        async function generatePhishing() {
+            const targetEl = document.getElementById('targetInput');
+            const baitEl = document.getElementById('baitInput');
+            const resultEl = document.getElementById('labResult');
+            const btnEl = document.getElementById('simulateBtn');
+            
+            const targetText = targetEl.value.trim();
+            const baitText = baitEl.value.trim();
+
+            if (!targetText || !baitText) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = "<p style='color: var(--accent-red);'><b>ERRORE:</b> Inserisci sia un Bersaglio che un'Esca per la simulazione!</p>";
+                return;
+            }
+
+            const combinedInput = `Bersaglio: ${targetText}\nEsca: ${baitText}`;
+
+            btnEl.disabled = true;
+            btnEl.innerHTML = "GENERAZIONE PAYLOAD... ⚙️";
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = "<p><i>Analisi delle vulnerabilità del bersaglio in corso...</i></p>";
+
+            try {
+                const data = await fetchGeminiAPI(combinedInput, labSystemPrompt);
+                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (responseText) {
+                    resultEl.innerHTML = responseText;
+                } else {
+                    resultEl.innerHTML = "<p>Impossibile generare la simulazione.</p>";
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                resultEl.innerHTML = "<p style='color: var(--accent-red);'><b>ERRORE MAIN FRAME.</b> Riprova più tardi.</p>";
+            } finally {
+                btnEl.disabled = false;
+                btnEl.innerHTML = "GENERA NUOVA SIMULAZIONE ✨";
+            }
+        }
+    </script>
+</body>
+</html>
